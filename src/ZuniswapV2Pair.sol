@@ -30,8 +30,8 @@ contract ZuniswapV2Pair is ERC20, Math {
     address public token0;
     address public token1;
 
-    uint112 private reserve0;
-    uint112 private reserve1;
+    uint112 private reserve0; // 儲存儲備
+    uint112 private reserve1; 
     uint32 private blockTimestampLast;
 
     uint256 public price0CumulativeLast;
@@ -74,17 +74,27 @@ contract ZuniswapV2Pair is ERC20, Math {
     }
 
     function mint(address to) public returns (uint256 liquidity) {
+        // 先取得當前儲備
         (uint112 reserve0_, uint112 reserve1_, ) = getReserves();
+
         uint256 balance0 = IERC20(token0).balanceOf(address(this));
         uint256 balance1 = IERC20(token1).balanceOf(address(this));
-        uint256 amount0 = balance0 - reserve0_;
+
+        // 算出多的流動性要 mint LP token
+        uint256 amount0 = balance0 - reserve0_; 
         uint256 amount1 = balance1 - reserve1_;
 
-        if (totalSupply == 0) {
-            liquidity = Math.sqrt(amount0 * amount1) - MINIMUM_LIQUIDITY;
-            _mint(address(0), MINIMUM_LIQUIDITY);
+
+        if (totalSupply == 0) { // initiallly deposit 
+            liquidity = Math.sqrt(amount0 * amount1) - MINIMUM_LIQUIDITY; 
+            // MINIMUM_LIQUIDITY = 1000, 為了讓 LP token share 不要太貴，趕走小的 LP（因為精度問題）
+            // ex. 如果一開始就 deposit 1e6 token0, 1e6 token1，那麼就會 mint 1e6 LP token
+            // 後續如果有人給 1e12 token0, 1e12 token1，那麼就會 mint 1e12/1e6 LP token，這樣精度上損失比較大（如 USDC 從 1e6 開始當整數）
+            _mint(address(0), MINIMUM_LIQUIDITY); // burn the amount of MINIMUM_LIQUIDITY LP token
         } else {
-            liquidity = Math.min(
+            liquidity = Math.min( // return the smaller one, punish for depositing of unbalanced liquidity
+
+            // (amount0 / reserve0_) * totalSupply 表示 token0 的份額乘上總流動性，來決定要 mint 出多少 LP token                                                   
                 (amount0 * totalSupply) / reserve0_,
                 (amount1 * totalSupply) / reserve1_
             );
@@ -94,7 +104,7 @@ contract ZuniswapV2Pair is ERC20, Math {
 
         _mint(to, liquidity);
 
-        _update(balance0, balance1, reserve0_, reserve1_);
+        _update(balance0, balance1, reserve0_, reserve1_); // 最後更新儲備
 
         emit Mint(to, amount0, amount1);
     }
