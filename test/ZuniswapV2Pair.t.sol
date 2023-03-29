@@ -11,7 +11,7 @@ contract ZuniswapV2PairTest is Test {
     ERC20Mintable token0;
     ERC20Mintable token1;
     ZuniswapV2Pair pair;
-    TestUser testUser;
+    TestUser testUser; // 先忽略
 
     function setUp() public {
         testUser = new TestUser();
